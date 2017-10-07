@@ -1,0 +1,43 @@
+---
+
+- hosts: localhost
+  gather_facts: yes
+  connection: local
+# - hosts: azure
+
+  vars:
+    stn_path: "{{ playbook_dir }}/security-securethenews"
+    ds_path: "{{ playbook_dir }}/domain-scan"
+
+    ds_domains: "{{ playbook_dir }}/files/domains.csv"
+
+    foo: bar
+
+  pre_tasks:
+    - name: Clone domain-scan
+      shell: "git clone https://github.com/italia/domain-scan.git {{ ds_path }}"
+      # git:
+      #   repo: 'https://github.com/italia/domain-scan.git'
+      #   dest: "{{ playbook_dir }}"
+      #   depth: 1
+
+    - name: Clone securethenews
+      shell: "git clone https://github.com/italia/security-securethenews {{ stn_path }}"
+      # git:
+      #   repo: 'https://github.com/italia/security-securethenews'
+      #   dest: "{{ playbook_dir }}"
+      #   depth: 1
+
+    - name: Create shared domain-scan and securethenews dir
+      file:
+        path: "{{ stn_path }}/results"
+        state: directory
+
+  roles:
+    - domain-scan
+    - securethenews
+
+  # tasks:
+  #   - name: Launch docker-compose
+  #     # become: yes
+  #     command: "cd {{ playbook_dir }} && docker-compose up --build"

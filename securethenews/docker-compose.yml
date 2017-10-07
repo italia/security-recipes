@@ -1,0 +1,13 @@
+version: '3'
+services:
+
+  scan:
+    build: ./domain-scan
+    volumes:
+      - ./:/home/scanner
+
+  postgresql:
+
+
+  django:
+    build: ./security-securethenews/docker

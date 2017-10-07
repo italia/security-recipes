@@ -1,0 +1,38 @@
+---
+
+- name: Create domain-scan docker image
+  docker_image:
+    name: ds-dock
+    path: "{{ ds_path }}"
+
+- name: Copy domains list
+  copy:
+    src: "{{ ds_domains }}"
+    dest: "{{ stn_path }}/results/domains.csv"
+
+- name: Purge existing ds container wait flag
+  file:
+    state: absent
+    path: "{{ stn_path }}/.ds_complete"
+
+- name: Start domain-scan
+  docker_container:
+    name: ds-dock-1
+    image: ds-dock
+    volumes:
+      - "{{ stn_path }}/results:/home/scanner/cache/"
+    entrypoint: ''  # elimino l'entrypoint di default per avere più possibilità
+    # dovrei usare sudo -E -u scanner -H bash -l -s ./scan per sicurezza
+    command: /bin/sh -c "/home/scanner/scan --scan=pshtt /home/scanner/cache/domains.csv ; touch /home/scanner/cache/.ds_complete"
+    state: started
+    recreate: yes
+
+- name: Wait for ds to finish scanning
+  wait_for:
+    path: "{{ stn_path }}/results/.ds_complete"
+
+- name: Wait for ds to finish scanning
+  wait_for:
+    path: "{{ stn_path }}/results/preload-list.json"
+    timeout: 10         # ignoro gli errori
+  ignore_errors: true   # perchè la creazione del file è inconsistente
