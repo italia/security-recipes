@@ -1,0 +1,6 @@
+[development]
+localhost
+
+[development:vars]
+ansible_connection=local
+gather_facts=yes

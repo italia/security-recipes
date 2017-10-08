@@ -1,3 +1,21 @@
 ---
 
-node_tag: 4.8.2-alpine
+stn_node_tag: 4.8.2-alpine
+
+stn_path: "{{ playbook_dir }}/security-securethenews"
+stn_results_path: "{{ playbook_dir }}/results"
+
+stn_postgresql_password: securethenewspassword
+stn_postgresql_username: securethenews
+
+stn_public_port: 8000
+stn_public_host: "{{ ansible_default_ipv4.address }}"
+
+stn_django_secret_key:
+stn_django_allowed_hosts: "localhost {{ stn_public_host }}"
+stn_django_base_url: "{{ stn_public_host }}"
+stn_django_csrf_trusted_origins:
+# stn_django_static_root:
+# stn_django_media_root:
+stn_django_es_host:
+stn_django_es_ca_path:

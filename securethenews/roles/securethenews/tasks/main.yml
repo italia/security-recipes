@@ -33,11 +33,11 @@
 #
 # - name: Build node image with pax flags
 #   docker_image:
-#     name: "node_grsec:{{ node_tag }}"
+#     name: "node_grsec:{{ stn_node_tag }}"
 #     # Reuse custom NodeJS Dockerfile from CI
 #     dockerfile: "{{ role_path }}/files/node/Dockerfile"
 #     path: "{{ stn_path }}"
-#     tag: "{{ node_tag }}"
+#     tag: "{{ stn_node_tag }}"
 #
 # - name: Purge existing node container wait flag
 #   file:
@@ -47,7 +47,7 @@
 # - name: Start node
 #   docker_container:
 #     name: stn_node
-#     image: "{{ node_grsec_image|default('node') }}:{{ node_tag }}"
+#     image: "{{ node_grsec_image|default('node') }}:{{ stn_node_tag }}"
 #     volumes:
 #       - "{{ stn_path }}:/django"
 #     state: started
@@ -64,10 +64,10 @@
 
 - name: Build node image with python
   docker_image:
-    name: "stn_node:{{ node_tag }}"
+    name: "stn_node:{{ stn_node_tag }}"
     dockerfile: "{{ role_path }}/files/node/Dockerfile"
     path: "{{ stn_path }}"
-    tag: "{{ node_tag }}"
+    tag: "{{ stn_node_tag }}"
 
 - name: Purge existing node container wait flag
   file:
@@ -77,7 +77,7 @@
 - name: Start node
   docker_container:
     name: stn_node-1
-    image: "stn_node:{{ node_tag }}"
+    image: "stn_node:{{ stn_node_tag }}"
     volumes:
       - "{{ stn_path }}:/django"
     state: started
@@ -103,19 +103,28 @@
     exposed_ports:
       - 8000
     published_ports:
-      - "8000:{{ stn_public_port | default('8000') }}"
+      - "8000:{{ stn_public_port}}"
     working_dir: /var/www/django
     interactive: true
     tty: true
-    command: |
-      /bin/bash -c "./manage.py migrate; ./manage.py runserver 0.0.0.0:8000"
+    # command: /bin/bash -c "sleep 30; ./manage.py migrate; ./manage.py runserver 0.0.0.0:8000"
+    command: /bin/bash -c "sleep 30; ./manage.py migrate; gunicorn securethenews.wsgi:application --bind 0.0.0.0:8000"
     user: gcorn
     env:
+      DJANGO_SETTINGS_MODULE: securethenews.settings.production
       DJANGO_DB_PASSWORD: "{{ stn_postgresql_password }}"
       DJANGO_DB_USER: "{{ stn_postgresql_username }}"
       DJANGO_DB_NAME: securethenews_db_1
       DJANGO_DB_PORT: 5432
-      DJANGO_DB_HOST: "{{ pg_container_results.ansible_facts.docker_container.NetworkSettings.IPAddress }}"
+      DJANGO_DB_HOST: stn_postgresql-1
+      DJANGO_SECRET_KEY: "{{ stn_django_secret_key }}"
+      DJANGO_ALLOWED_HOSTS: "{{ stn_django_allowed_hosts }}"
+      DJANGO_BASE_URL: "http://{{ stn_django_base_url }}"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "{{ stn_django_csrf_trusted_origins }}"
+      # DJANGO_STATIC_ROOT: "{{ stn_django_static_root }}"
+      # DJANGO_MEDIA_ROOT: "{{ stn_django_media_root }}"
+      DJANGO_ES_HOST: "{{ stn_django_es_host }}"
+      DJANGO_ES_CA_PATH: "{{ stn_django_es_ca_path }}"
     recreate: yes
 
 #####
@@ -126,9 +135,19 @@
 
 #####
 
+- name: Link containers through Docker network
+  docker_network:
+    name: stn_network
+    connected:
+      - stn_postgresql-1
+      - stn_django-1
+      - stn_node-1
+    state: present
+    force: yes
+
 - name: Wait for Django runserver to come up
   uri:
-    url: "http://{{ ansible_default_ipv4.address }}:{{ stn_public_port | default('8000')  }}"
+    url: "http://{{ stn_public_host }}:{{ stn_public_port }}"
     method: GET
     status_code: 200
   register: uri_scrape_result
@@ -137,4 +156,4 @@
   delay: 20
 
 - debug:
-    msg: "Up at http://{{ ansible_default_ipv4.address }}:{{ stn_public_port | default('8000')  }}."
+    msg: "Up at http://{{ stn_public_host }}:{{ stn_public_port }}."
