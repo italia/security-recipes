@@ -21,14 +21,14 @@
     ds_domains: "{{ playbook_dir }}/files/domains.csv"
 
   pre_tasks:
-    # - name: Clone domain-scan
+    - name: Clone domain-scan
     #   # shell: "git clone https://github.com/italia/domain-scan.git {{ ds_path }}"
       git:
         repo: 'https://github.com/italia/domain-scan.git'
         dest: "{{ ds_path }}"
         depth: 1
 
-    # - name: Clone securethenews
+    - name: Clone securethenews
     #   # shell: "git clone https://github.com/italia/security-securethenews {{ stn_path }}"
       git:
         repo: 'https://github.com/italia/security-securethenews'
