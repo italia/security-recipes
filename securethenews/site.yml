@@ -13,25 +13,27 @@
     stn_postgresql_password: securethenewspassword
     stn_postgresql_username: securethenews
 
-    stn_public_host: "172.101.0.78"
+    stn_public_host: "localhost"
     stn_public_port: 8000
+
+    stn_cron: false
 
     ds_domains: "{{ playbook_dir }}/files/domains.csv"
 
   pre_tasks:
     # - name: Clone domain-scan
     #   # shell: "git clone https://github.com/italia/domain-scan.git {{ ds_path }}"
-    #   git:
-    #     repo: 'https://github.com/italia/domain-scan.git'
-    #     dest: "{{ ds_path }}"
-    #     depth: 1
-    #
+      git:
+        repo: 'https://github.com/italia/domain-scan.git'
+        dest: "{{ ds_path }}"
+        depth: 1
+
     # - name: Clone securethenews
     #   # shell: "git clone https://github.com/italia/security-securethenews {{ stn_path }}"
-    #   git:
-    #     repo: 'https://github.com/italia/security-securethenews'
-    #     dest: "{{ stn_path }}"
-    #     depth: 1
+      git:
+        repo: 'https://github.com/italia/security-securethenews'
+        dest: "{{ stn_path }}"
+        depth: 1
 
     - name: Create shared domain-scan and securethenews dir
       file:

@@ -22,45 +22,6 @@
       POSTGRES_USER: "{{ stn_postgresql_username }}"
       POSTGRES_DB: securethenews_db_1
     user: postgres
-  register: pg_container_results
-
-#####
-
-# - name: If grsec, add paxflags cmd to node
-#   set_fact:
-#     node_grsec_image: "node_grsec"
-#   when: ansible_kernel.endswith('grsec')
-#
-# - name: Build node image with pax flags
-#   docker_image:
-#     name: "node_grsec:{{ stn_node_tag }}"
-#     # Reuse custom NodeJS Dockerfile from CI
-#     dockerfile: "{{ role_path }}/files/node/Dockerfile"
-#     path: "{{ stn_path }}"
-#     tag: "{{ stn_node_tag }}"
-#
-# - name: Purge existing node container wait flag
-#   file:
-#     state: absent
-#     path: "{{ stn_path }}./.node_complete"
-#
-# - name: Start node
-#   docker_container:
-#     name: stn_node
-#     image: "{{ node_grsec_image|default('node') }}:{{ stn_node_tag }}"
-#     volumes:
-#       - "{{ stn_path }}:/django"
-#     state: started
-#     working_dir: /django
-#     command: /bin/ash -c "npm install && touch .node_complete && gulp watch"
-#     user: node
-#     recreate: yes
-#
-# - name: Wait for node to finish installing deps
-#   wait_for:
-#     path: "{{ stn_path }}/.node_complete"
-
-#####
 
 - name: Build node image with python
   docker_image:
@@ -91,8 +52,6 @@
     path: "{{ stn_path }}/.node_complete"
     timeout: 600
 
-#####
-
 - name: Start Django server
   docker_container:
     name: stn_django-1
@@ -107,8 +66,9 @@
     working_dir: /var/www/django
     interactive: true
     tty: true
-    # command: /bin/bash -c "sleep 30; ./manage.py migrate; ./manage.py runserver 0.0.0.0:8000"
-    command: /bin/bash -c "sleep 30; ./manage.py migrate; gunicorn securethenews.wsgi:application --bind 0.0.0.0:8000"
+    command: /bin/bash -c "sleep 30; ./manage.py makemigrations; ./manage.py migrate; ./manage.py runserver 0.0.0.0:8000"
+    # meglio questo commentato ma richiedere nginx per i content statici
+    # command: /bin/bash -c "sleep 30; ./manage.py migrate; gunicorn securethenews.wsgi:application --bind 0.0.0.0:8000"
     user: gcorn
     env:
       DJANGO_SETTINGS_MODULE: securethenews.settings.production
@@ -126,14 +86,6 @@
       DJANGO_ES_HOST: "{{ stn_django_es_host }}"
       DJANGO_ES_CA_PATH: "{{ stn_django_es_ca_path }}"
     recreate: yes
-
-#####
-
-# - name: Slap paxflags onto pshtt and python when under grsec
-#   command: docker exec -u root stn-django /bin/bash -c "paxctl -Cm $(which python)"
-#   when: ansible_kernel.endswith('grsec')
-
-#####
 
 - name: Link containers through Docker network
   docker_network:
@@ -154,6 +106,21 @@
   until: uri_scrape_result.status == 200
   retries: 10
   delay: 20
+
+- name: Template update script
+  template:
+    src: import.py.j2
+    dest: "{{ stn_path }}/import.py"
+    mode: 0755
+  when: stn_cron == 'true'
+
+- name: Update data every hour
+  cron:
+    name: "update stn data"
+    minute: "0"
+    hour: "*"
+    job: "{{ stn_path }}/import.py"
+  when: stn_cron == 'true'
 
 - debug:
     msg: "Up at http://{{ stn_public_host }}:{{ stn_public_port }}."
