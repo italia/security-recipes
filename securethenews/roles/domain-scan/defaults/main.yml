@@ -1,4 +1,4 @@
 ---
 
-ds_path: "{{ playbook_dir }}/domain-scan"
-ds_results_path: "{{ playbook_dir }}/results"
+ds_path: "{{ base_path }}/domain-scan"
+ds_results_path: "{{ base_path }}/results"

@@ -1,0 +1,102 @@
+#!/usr/bin/python
+
+#
+# importo librerie necessarie
+#
+
+import shutil
+import docker
+import time
+import datetime
+import os
+import json
+import pytz
+
+#
+# dichiaro variabili generali
+#
+
+ds_path = '{{ base_path }}/results'
+stn_path = '{{ base_path }}/security-securethenews'
+
+#
+# elimino i risultati precedenti
+#
+
+if os.path.exists(ds_path + '/pshtt'):
+    shutil.rmtree(ds_path + '/pshtt')
+
+#
+# lancio docker di domain-scan
+#
+
+client = docker.from_env()
+container = client.containers.get('domain_scan-1')
+container.start()
+time.sleep(15)
+while(container.attrs['State']['Status'] != 'exited'):
+    time.sleep(5)
+container.stop()
+
+#
+# parserizzo i risultati in fixtures
+#
+
+index = 0
+fixture = []
+
+for filename in os.listdir(ds_path + '/pshtt'):
+    if filename.endswith(".json"):
+        with open(os.path.join(ds_path + '/pshtt', filename)) as data_file:
+            data = json.load(data_file)
+            if data[0]:
+                now = datetime.datetime.now(pytz.timezone('UTC'))
+                print(data)
+
+                temp = {
+                    "model": "sites.site",
+                    "pk": index,
+                    "fields": {
+                        "name": data[0]['Domain'],
+                        "slug": data[0]['Domain'],
+                        "domain": data[0]['Domain'],
+                        "added": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                    }
+                }
+                fixture.append(temp)
+
+                temp = {
+                    "model": "sites.scan",
+                    "pk": index,
+                    "fields": {
+                        "site": index,
+                        # "timestamp": 'None',
+                        "timestamp": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                        "live": data[0]['Live'],
+                        "valid_https": data[0]['Valid HTTPS'],
+                        "downgrades_https": data[0]['Downgrades HTTPS'],
+                        "defaults_to_https": data[0]['Defaults to HTTPS'],
+                        "hsts": data[0]['HSTS'],
+                        "hsts_max_age": data[0]['HSTS Max Age'],
+                        "hsts_entire_domain": data[0]['HSTS Entire Domain'],
+                        "hsts_preload_ready": data[0]['HSTS Preload Ready'],
+                        "hsts_preloaded": data[0]['HSTS Preloaded'],
+                        "score": 50,
+                        "pshtt_stdout": data[0],
+                        "pshtt_stderr": "Failed to connect.\n"
+                    }
+                }
+                fixture.append(temp)
+
+                index = index + 1
+
+with open(stn_path + "/sites/fixtures/production.json", "w") as fixture_file:
+    fixture_file.write(json.dumps(fixture, ensure_ascii=False))
+
+#
+# importo le nuove fixtures in securethenews
+#
+
+container = client.containers.get('stn_django-1')
+# container.exec_run(cmd = '/bin/sh -c "./manage.py loaddata sites/fixtures/production.json; ./manage.py makemigrations; ./manage.py migrate"') # esegui il comando di import
+container.exec_run(cmd = '/bin/sh -c "./manage.py loaddata sites/fixtures/production.json"') # esegui il comando di import

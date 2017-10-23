@@ -1,5 +1,12 @@
 ---
 
+- name: Clone domain-scan
+  # shell: "git clone https://github.com/italia/domain-scan.git {{ ds_path }}"
+  git:
+    repo: 'https://github.com/italia/domain-scan.git'
+    dest: "{{ ds_path }}"
+    depth: 1
+
 - name: Create domain-scan docker image
   docker_image:
     name: domain_scan
@@ -7,7 +14,7 @@
 
 - name: Copy domains list
   copy:
-    src: "{{ ds_domains }}"
+    src: "{{ ds_domains_file }}"
     dest: "{{ ds_results_path }}/domains.csv"
 
 - name: Purge existing ds container wait flag
@@ -20,7 +27,7 @@
     name: domain_scan-1
     image: domain_scan
     volumes:
-      - "{{ ds_results_path }}:/home/scanner/cache/"
+      - "{{ ds_results_path }}:/home/scanner/cache/:rw"
     entrypoint: ''
     command: /bin/sh -c "/home/scanner/scan --scan=pshtt /home/scanner/cache/domains.csv ; touch /home/scanner/cache/.ds_complete"
     # command: /bin/sh -c "sudo -E -u scanner -H bash -l -s ./scan --scan=pshtt ./cache/domains.csv ; sudo -E -u scanner -H bash -l -s touch ./cache/.ds_complete"

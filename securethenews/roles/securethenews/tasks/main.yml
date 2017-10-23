@@ -1,5 +1,12 @@
 ---
 
+- name: Clone securethenews
+  # shell: "git clone https://github.com/italia/security-securethenews {{ stn_path }}"
+  git:
+    repo: 'https://github.com/italia/security-securethenews'
+    dest: "{{ stn_path }}"
+    depth: 1
+
 - name: Create Django docker image
   docker_image:
     name: stn_django
@@ -66,9 +73,9 @@
     working_dir: /var/www/django
     interactive: true
     tty: true
-    command: /bin/bash -c "sleep 30; ./manage.py makemigrations; ./manage.py migrate; ./manage.py runserver 0.0.0.0:8000"
-    # meglio questo commentato ma richiedere nginx per i content statici
-    # command: /bin/bash -c "sleep 30; ./manage.py migrate; gunicorn securethenews.wsgi:application --bind 0.0.0.0:8000"
+    # command: /bin/bash -c "sleep 30; ./manage.py makemigrations; ./manage.py migrate; ./manage.py runserver 0.0.0.0:8000"
+    # meglio questo sotto ma richiede nginx
+    command: /bin/bash -c "sleep 30; ./manage.py migrate; gunicorn securethenews.wsgi:application --bind 0.0.0.0:8000"
     user: gcorn
     env:
       DJANGO_SETTINGS_MODULE: securethenews.settings.production
@@ -81,11 +88,23 @@
       DJANGO_ALLOWED_HOSTS: "{{ stn_django_allowed_hosts }}"
       DJANGO_BASE_URL: "http://{{ stn_django_base_url }}"
       DJANGO_CSRF_TRUSTED_ORIGINS: "{{ stn_django_csrf_trusted_origins }}"
-      # DJANGO_STATIC_ROOT: "{{ stn_django_static_root }}"
-      # DJANGO_MEDIA_ROOT: "{{ stn_django_media_root }}"
+      DJANGO_STATIC_ROOT: '/static/' # "{{ stn_django_static_root }}"
+      DJANGO_MEDIA_ROOT: '/media/' # "{{ stn_django_media_root }}"
       DJANGO_ES_HOST: "{{ stn_django_es_host }}"
       DJANGO_ES_CA_PATH: "{{ stn_django_es_ca_path }}"
     recreate: yes
+
+- name: Start nginx
+  docker_container:
+    name: stn_nginx-1
+    image: "nginx:{{ stn_nginx_tag }}"
+    exposed_ports:
+      - 80
+    published_ports:
+      - 80
+    volumes:
+      - "{{ stn_path }}:/usr/share/nginx/html:ro"
+    state: started
 
 - name: Link containers through Docker network
   docker_network:
@@ -94,6 +113,7 @@
       - stn_postgresql-1
       - stn_django-1
       - stn_node-1
+      - stn_nginx-1
     state: present
     force: yes
 
@@ -106,21 +126,6 @@
   until: uri_scrape_result.status == 200
   retries: 10
   delay: 20
-
-- name: Template update script
-  template:
-    src: import.py.j2
-    dest: "{{ stn_path }}/import.py"
-    mode: 0755
-  when: stn_cron == 'true'
-
-- name: Update data every hour
-  cron:
-    name: "update stn data"
-    minute: "0"
-    hour: "*"
-    job: "{{ stn_path }}/import.py"
-  when: stn_cron == 'true'
 
 - debug:
     msg: "Up at http://{{ stn_public_host }}:{{ stn_public_port }}."
