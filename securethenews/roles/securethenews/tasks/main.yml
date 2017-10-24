@@ -34,8 +34,8 @@
     name: stn_node
     dockerfile: "{{ role_path }}/files/node/Dockerfile"
     path: "{{ stn_path }}"
-    # state: present
-    # force: yes
+    state: present
+    force: yes
 
 - name: Purge existing node container wait flag
   file:
@@ -50,7 +50,7 @@
       - "{{ stn_path }}:/django"
     state: started
     working_dir: /django
-    command: /bin/ash -c "npm install && gulp build:production && touch .node_complete"
+    command: /bin/ash -c "npm install && npm rebuild node-sass && gulp build:production && touch .node_complete"
     user: node
     recreate: yes
 

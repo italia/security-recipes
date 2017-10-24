@@ -1,5 +1,5 @@
-#FROM node:6.11.0-alpine
-FROM node:4.8.2-alpine
+FROM node:6.11.0-alpine
+#FROM node:4.8.2-alpine
 
 RUN apk update
 RUN apk add paxctl
