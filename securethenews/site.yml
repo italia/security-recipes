@@ -24,8 +24,8 @@
         mode: 0755
 
   roles:
-    - domain-scan
-    - securethenews
+    # - domain-scan
+    # - securethenews
 
   tasks:
     - name: Update data every hour

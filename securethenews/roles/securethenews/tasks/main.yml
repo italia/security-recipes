@@ -1,7 +1,6 @@
 ---
 
 - name: Clone securethenews
-  # shell: "git clone https://github.com/italia/security-securethenews {{ stn_path }}"
   git:
     repo: 'https://github.com/italia/security-securethenews'
     dest: "{{ stn_path }}"
@@ -12,15 +11,15 @@
     name: stn_django
     dockerfile: "{{ role_path }}/files/django/Dockerfile"
     path: "{{ stn_path }}"
+    # state: present
+    # force: yes
 
 - name: Start postgresql
   docker_container:
     name: stn_postgresql-1
     image: postgres:9.3
-    exposed_ports:
-      - 5432
     published_ports:
-      - 5432
+      - '5432:5432'
     volumes:
       - "{{ stn_path }}:/django"
     state: started
@@ -32,10 +31,11 @@
 
 - name: Build node image with python
   docker_image:
-    name: "stn_node:{{ stn_node_tag }}"
+    name: stn_node
     dockerfile: "{{ role_path }}/files/node/Dockerfile"
     path: "{{ stn_path }}"
-    tag: "{{ stn_node_tag }}"
+    # state: present
+    # force: yes
 
 - name: Purge existing node container wait flag
   file:
@@ -45,12 +45,12 @@
 - name: Start node
   docker_container:
     name: stn_node-1
-    image: "stn_node:{{ stn_node_tag }}"
+    image: stn_node
     volumes:
       - "{{ stn_path }}:/django"
     state: started
     working_dir: /django
-    command: /bin/ash -c "npm install && touch .node_complete && gulp watch"
+    command: /bin/ash -c "npm install && gulp build:production && touch .node_complete"
     user: node
     recreate: yes
 
@@ -66,10 +66,8 @@
     volumes:
       - "{{ stn_path }}:/var/www/django"
     state: started
-    exposed_ports:
-      - 8000
     published_ports:
-      - "8000:{{ stn_public_port}}"
+      - "8000:8000"
     working_dir: /var/www/django
     interactive: true
     tty: true
@@ -92,19 +90,26 @@
       DJANGO_MEDIA_ROOT: '/media/' # "{{ stn_django_media_root }}"
       DJANGO_ES_HOST: "{{ stn_django_es_host }}"
       DJANGO_ES_CA_PATH: "{{ stn_django_es_ca_path }}"
-    recreate: yes
+    # recreate: yes
+
+- name: Create Nginx docker image
+  docker_image:
+    name: stn_nginx
+    dockerfile: "{{ role_path }}/files/nginx/Dockerfile"
+    path: "{{ stn_path }}"
+    state: present
+    force: yes
 
 - name: Start nginx
   docker_container:
     name: stn_nginx-1
-    image: "nginx:{{ stn_nginx_tag }}"
-    exposed_ports:
-      - 80
+    image: stn_nginx
     published_ports:
-      - 80
+      - '80:80'
     volumes:
       - "{{ stn_path }}:/usr/share/nginx/html:ro"
     state: started
+    recreate: yes
 
 - name: Link containers through Docker network
   docker_network:
@@ -119,13 +124,13 @@
 
 - name: Wait for Django runserver to come up
   uri:
-    url: "http://{{ stn_public_host }}:{{ stn_public_port }}"
+    url: "http://{{ stn_public_host }}"
     method: GET
     status_code: 200
   register: uri_scrape_result
   until: uri_scrape_result.status == 200
-  retries: 10
-  delay: 20
+  retries: 20
+  delay: 5
 
 - debug:
-    msg: "Up at http://{{ stn_public_host }}:{{ stn_public_port }}."
+    msg: "Up at http://{{ stn_public_host }}."

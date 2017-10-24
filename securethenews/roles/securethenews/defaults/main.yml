@@ -1,9 +1,5 @@
 ---
 
-stn_node_tag: 4.8.2-alpine
-stn_nginx_tag: 1.13.5
-
-stn_public_port: 8000
 stn_public_host: "{{ ansible_default_ipv4.address }}"
 
 stn_path: "{{ base_path }}/security-securethenews"

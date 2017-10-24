@@ -1,7 +1,6 @@
 ---
 
 - name: Clone domain-scan
-  # shell: "git clone https://github.com/italia/domain-scan.git {{ ds_path }}"
   git:
     repo: 'https://github.com/italia/domain-scan.git'
     dest: "{{ ds_path }}"

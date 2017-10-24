@@ -49,16 +49,14 @@ for filename in os.listdir(ds_path + '/pshtt'):
     if filename.endswith(".json"):
         with open(os.path.join(ds_path + '/pshtt', filename)) as data_file:
             data = json.load(data_file)
-            if data[0]:
-                now = datetime.datetime.now(pytz.timezone('UTC'))
-                print(data)
-
+            now = datetime.datetime.now(pytz.timezone('UTC'))
+            try:
                 temp = {
                     "model": "sites.site",
                     "pk": index,
                     "fields": {
                         "name": data[0]['Domain'],
-                        "slug": data[0]['Domain'],
+                        "slug": data[0]['Domain'].replace('.', '-'),
                         "domain": data[0]['Domain'],
                         "added": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
                     }
@@ -83,12 +81,48 @@ for filename in os.listdir(ds_path + '/pshtt'):
                         "hsts_preloaded": data[0]['HSTS Preloaded'],
                         "score": 50,
                         "pshtt_stdout": data[0],
-                        "pshtt_stderr": "Failed to connect.\n"
+                        "pshtt_stderr": ""
                     }
                 }
                 fixture.append(temp)
 
-                index = index + 1
+            except KeyError:
+                temp = {
+                    "model": "sites.site",
+                    "pk": index,
+                    "fields": {
+                        "name": filename.replace('.json', ''),
+                        "slug": filename.replace('.json', '').replace('.', '-'),
+                        "domain": filename.replace('.json', ''),
+                        "added": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+                    }
+                }
+                fixture.append(temp)
+
+                temp = {
+                    "model": "sites.scan",
+                    "pk": index,
+                    "fields": {
+                        "site": index,
+                        # "timestamp": 'None',
+                        "timestamp": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                        "live": False,
+                        "valid_https": False,
+                        "downgrades_https": False,
+                        "defaults_to_https": False,
+                        "hsts": False,
+                        "hsts_max_age": False,
+                        "hsts_entire_domain": False,
+                        "hsts_preload_ready": False,
+                        "hsts_preloaded": False,
+                        "score": 0,
+                        "pshtt_stdout": "",
+                        "pshtt_stderr": "Invalid."
+                    }
+                }
+                fixture.append(temp)
+
+            index = index + 1
 
 with open(stn_path + "/sites/fixtures/production.json", "w") as fixture_file:
     fixture_file.write(json.dumps(fixture, ensure_ascii=False))
@@ -98,5 +132,4 @@ with open(stn_path + "/sites/fixtures/production.json", "w") as fixture_file:
 #
 
 container = client.containers.get('stn_django-1')
-# container.exec_run(cmd = '/bin/sh -c "./manage.py loaddata sites/fixtures/production.json; ./manage.py makemigrations; ./manage.py migrate"') # esegui il comando di import
-container.exec_run(cmd = '/bin/sh -c "./manage.py loaddata sites/fixtures/production.json"') # esegui il comando di import
+container.exec_run(cmd = '/bin/sh -c "./manage.py loaddata sites/fixtures/production.json"')
