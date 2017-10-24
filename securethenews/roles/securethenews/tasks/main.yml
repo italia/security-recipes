@@ -97,8 +97,8 @@
     name: stn_nginx
     dockerfile: "{{ role_path }}/files/nginx/Dockerfile"
     path: "{{ stn_path }}"
-    state: present
-    force: yes
+    # state: present
+    # force: yes
 
 - name: Start nginx
   docker_container:
