@@ -34,8 +34,8 @@
     name: stn_node
     dockerfile: "{{ role_path }}/files/node/Dockerfile"
     path: "{{ stn_path }}"
-    state: present
-    force: yes
+    # state: present
+    # force: yes
 
 - name: Purge existing node container wait flag
   file:
@@ -109,7 +109,7 @@
     volumes:
       - "{{ stn_path }}:/usr/share/nginx/html:ro"
     state: started
-    recreate: yes
+    # recreate: yes
 
 - name: Link containers through Docker network
   docker_network:
@@ -122,7 +122,7 @@
     state: present
     force: yes
 
-- name: Wait for Django runserver to come up
+- name: Wait for Django to come up
   uri:
     url: "http://{{ stn_public_host }}"
     method: GET
@@ -131,6 +131,3 @@
   until: uri_scrape_result.status == 200
   retries: 20
   delay: 5
-
-- debug:
-    msg: "Up at http://{{ stn_public_host }}."

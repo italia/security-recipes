@@ -18,6 +18,7 @@ import pytz
 
 ds_path = '{{ base_path }}/results'
 stn_path = '{{ base_path }}/security-securethenews'
+client = docker.from_env()
 
 #
 # elimino i risultati precedenti
@@ -30,13 +31,12 @@ if os.path.exists(ds_path + '/pshtt'):
 # lancio docker di domain-scan
 #
 
-client = docker.from_env()
 container = client.containers.get('domain_scan-1')
 container.start()
-time.sleep(15)
-while(container.attrs['State']['Status'] != 'exited'):
+time.sleep(10)
+while(client.containers.get('domain_scan-1').status != 'exited'):
     time.sleep(5)
-container.stop()
+#container.stop()
 
 #
 # parserizzo i risultati in fixtures
