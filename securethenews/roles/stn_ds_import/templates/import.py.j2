@@ -9,8 +9,10 @@ import docker
 import time
 import datetime
 import os
-import json
 import pytz
+
+import csv
+import json
 
 #
 # dichiaro variabili generali
@@ -26,6 +28,9 @@ client = docker.from_env()
 
 if os.path.exists(ds_data_path + '/cache'):
     shutil.rmtree(ds_data_path + '/cache')
+
+if os.path.exists(ds_data_path + '/results'):
+    shutil.rmtree(ds_data_path + '/results')
 
 #
 # lancio docker di domain-scan
@@ -44,84 +49,122 @@ while(client.containers.get('domain_scan-1').status != 'exited'):
 index = 0
 fixture = []
 
-for filename in os.listdir(ds_data_path + '/cache/pshtt'):
-    if filename.endswith(".json"):
-        with open(os.path.join(ds_data_path + '/cache/pshtt', filename)) as data_file:
-            data = json.load(data_file)
-            now = datetime.datetime.now(pytz.timezone('UTC'))
-            try:
-                temp = {
-                    "model": "sites.site",
-                    "pk": index,
-                    "fields": {
-                        "name": data[0]['Domain'],
-                        "slug": data[0]['Domain'].replace('.', '-'),
-                        "domain": data[0]['Domain'],
-                        "added": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-                    }
-                }
-                fixture.append(temp)
+with open(ds_data_path + '/results/pshtt.csv', 'rb') as data_file:
+    data = csv.DictReader(data_file, delimiter=',');
+    now = datetime.datetime.now(pytz.timezone('UTC'))
+    for row in data:
+        temp = {
+            "model": "sites.site",
+            "pk": index,
+            "fields": {
+                "name": row['Domain'],
+                "slug": row['Domain'].replace('.', '-'),
+                "domain": row['Domain'],
+                "added": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            }
+        }
+        fixture.append(temp)
 
-                temp = {
-                    "model": "sites.scan",
-                    "pk": index,
-                    "fields": {
-                        "site": index,
-                        # "timestamp": 'None',
-                        "timestamp": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
-                        "live": data[0]['Live'],
-                        "valid_https": data[0]['Valid HTTPS'],
-                        "downgrades_https": data[0]['Downgrades HTTPS'],
-                        "defaults_to_https": data[0]['Defaults to HTTPS'],
-                        "hsts": data[0]['HSTS'],
-                        "hsts_max_age": data[0]['HSTS Max Age'],
-                        "hsts_entire_domain": data[0]['HSTS Entire Domain'],
-                        "hsts_preload_ready": data[0]['HSTS Preload Ready'],
-                        "hsts_preloaded": data[0]['HSTS Preloaded'],
-                        "score": 50,
-                        "pshtt_stdout": data[0],
-                        "pshtt_stderr": ""
-                    }
-                }
-                fixture.append(temp)
+        temp = {
+            "model": "sites.scan",
+            "pk": index,
+            "fields": {
+                "site": index,
+                "timestamp": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                "live": row['Live'],
+                "valid_https": row['Valid HTTPS'],
+                "downgrades_https": row['Downgrades HTTPS'],
+                "defaults_to_https": row['Defaults to HTTPS'],
+                "hsts": row['HSTS'],
+                "hsts_max_age": row['HSTS Max Age'],
+                "hsts_entire_domain": row['HSTS Entire Domain'],
+                "hsts_preload_ready": row['HSTS Preload Ready'],
+                "hsts_preloaded": row['HSTS Preloaded'],
+                "score": 50,
+                "pshtt_stdout": "",
+                "pshtt_stderr": ""
+            }
+        }
+        fixture.append(temp)
 
-            except KeyError:
-                temp = {
-                    "model": "sites.site",
-                    "pk": index,
-                    "fields": {
-                        "name": filename.replace('.json', ''),
-                        "slug": filename.replace('.json', '').replace('.', '-'),
-                        "domain": filename.replace('.json', ''),
-                        "added": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-                    }
-                }
-                fixture.append(temp)
+        index = index + 1
 
-                temp = {
-                    "model": "sites.scan",
-                    "pk": index,
-                    "fields": {
-                        "site": index,
-                        # "timestamp": 'None',
-                        "timestamp": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
-                        "live": False,
-                        "valid_https": False,
-                        "downgrades_https": False,
-                        "defaults_to_https": False,
-                        "hsts": False,
-                        "hsts_max_age": False,
-                        "hsts_entire_domain": False,
-                        "hsts_preload_ready": False,
-                        "hsts_preloaded": False,
-                        "score": 0,
-                        "pshtt_stdout": "",
-                        "pshtt_stderr": "Invalid."
-                    }
-                }
-                fixture.append(temp)
-
-            index = index + 1
+#for filename in os.listdir(ds_data_path + '/cache/pshtt'):
+#    if filename.endswith(".json"):
+#        with open(os.path.join(ds_data_path + '/cache/pshtt', filename)) as data_file:
+#            data = json.load(data_file)
+#            now = datetime.datetime.now(pytz.timezone('UTC'))
+#            try:
+#                temp = {
+#                    "model": "sites.site",
+#                    "pk": index,
+#                    "fields": {
+#                        "name": data[0]['Domain'],
+#                        "slug": data[0]['Domain'].replace('.', '-'),
+#                        "domain": data[0]['Domain'],
+#                        "added": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+#                    }
+#                }
+#                fixture.append(temp)
+#
+#                temp = {
+#                    "model": "sites.scan",
+#                    "pk": index,
+#                    "fields": {
+#                        "site": index,
+#                        "timestamp": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+#                        "live": data[0]['Live'],
+#                        "valid_https": data[0]['Valid HTTPS'],
+#                        "downgrades_https": data[0]['Downgrades HTTPS'],
+#                        "defaults_to_https": data[0]['Defaults to HTTPS'],
+#                        "hsts": data[0]['HSTS'],
+#                        "hsts_max_age": data[0]['HSTS Max Age'],
+#                        "hsts_entire_domain": data[0]['HSTS Entire Domain'],
+#                        "hsts_preload_ready": data[0]['HSTS Preload Ready'],
+#                        "hsts_preloaded": data[0]['HSTS Preloaded'],
+#                        "score": 50,
+#                        "pshtt_stdout": data[0],
+#                        "pshtt_stderr": ""
+#                    }
+#                }
+#                fixture.append(temp)
+#
+#            except KeyError:
+#                temp = {
+#                    "model": "sites.site",
+#                    "pk": index,
+#                    "fields": {
+#                        "name": filename.replace('.json', ''),
+#                        "slug": filename.replace('.json', '').replace('.', '-'),
+#                        "domain": filename.replace('.json', ''),
+#                        "added": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+#                    }
+#                }
+#                fixture.append(temp)
+#
+#                temp = {
+#                    "model": "sites.scan",
+#                    "pk": index,
+#                    "fields": {
+#                        "site": index,
+#                        "timestamp": now.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+#                        "live": False,
+#                        "valid_https": False,
+#                        "downgrades_https": False,
+#                        "defaults_to_https": False,
+#                        "hsts": False,
+#                        "hsts_max_age": False,
+#                        "hsts_entire_domain": False,
+#                        "hsts_preload_ready": False,
+#                        "hsts_preloaded": False,
+#                        "score": 0,
+#                        "pshtt_stdout": "",
+#                        "pshtt_stderr": "Invalid."
+#                    }
+#                }
+#                fixture.append(temp)
+#
+#            index = index + 1
 
 with open(stn_path + "/sites/fixtures/production.json", "w") as fixture_file:
     fixture_file.write(json.dumps(fixture, ensure_ascii=False))
