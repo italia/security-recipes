@@ -9,4 +9,3 @@ RUN \
     g++ \
   && paxctl -cm /usr/local/bin/node \
   && npm install --global gulp-cli
-  

@@ -1,0 +1,13 @@
+---
+
+- name: Import data cron
+  cron:
+    name: "update stn data"
+    minute: "0"
+    hour: "0"
+    job: "{{ ds_data_path }}/import.py"
+  when: stn_ds_import_cron == true
+
+- name: Import data now
+  shell: "python {{ ds_data_path }}/import.py"
+  when: stn_ds_import_now == true

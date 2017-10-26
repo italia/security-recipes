@@ -16,7 +16,7 @@ import pytz
 # dichiaro variabili generali
 #
 
-ds_results_path = '{{ ds_results_path }}'
+ds_data_path = '{{ ds_data_path }}'
 stn_path = '{{ stn_path }}'
 client = docker.from_env()
 
@@ -24,8 +24,8 @@ client = docker.from_env()
 # elimino i risultati precedenti
 #
 
-if os.path.exists(ds_results_path + '/pshtt'):
-    shutil.rmtree(ds_results_path + '/pshtt')
+if os.path.exists(ds_data_path + '/cache'):
+    shutil.rmtree(ds_data_path + '/cache')
 
 #
 # lancio docker di domain-scan
@@ -44,9 +44,9 @@ while(client.containers.get('domain_scan-1').status != 'exited'):
 index = 0
 fixture = []
 
-for filename in os.listdir(ds_results_path + '/pshtt'):
+for filename in os.listdir(ds_data_path + '/cache/pshtt'):
     if filename.endswith(".json"):
-        with open(os.path.join(ds_results_path + '/pshtt', filename)) as data_file:
+        with open(os.path.join(ds_data_path + '/cache/pshtt', filename)) as data_file:
             data = json.load(data_file)
             now = datetime.datetime.now(pytz.timezone('UTC'))
             try:

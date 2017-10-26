@@ -83,7 +83,8 @@ RUN pip3 install -r requirements.txt
 # pshtt
 ###
 
-RUN pip3 install pshtt==0.2.1
+RUN pip3 install pshtt==0.2.1 \
+  && pip install six --upgrade
 
 
 ###
@@ -93,12 +94,9 @@ RUN pip3 install pshtt==0.2.1
 ENV SCANNER_HOME /home/scanner
 RUN mkdir $SCANNER_HOME
 
-COPY . $SCANNER_HOME
-
 RUN groupadd -r scanner \
   && useradd -r -c "Scanner user" -g scanner scanner \
   && chown -R scanner:scanner ${SCANNER_HOME}
-
 
 ###
 # Prepare to Run

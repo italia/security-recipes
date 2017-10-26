@@ -4,14 +4,15 @@
 
   vars:
     ds_path: "{{ playbook_dir }}/domain-scan"
-    ds_results_path: "{{ playbook_dir }}/results"
-    ds_domains_file: "{{ playbook_dir }}/domains.csv"
+    ds_data_path: "{{ playbook_dir }}/data"
+    ds_domains_file: "{{ playbook_dir }}/sources/domains.csv"
 
     stn_path: "{{ playbook_dir }}/security-securethenews"
 
-    stn_ds_cron_import: false
+    stn_ds_import_cron: false
+    stn_ds_import_now: true
 
   roles:
+    - stn_ds_import
     - domain-scan
     - securethenews
-    - stn_ds_import

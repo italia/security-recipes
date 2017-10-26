@@ -38,11 +38,6 @@
     # state: present
     # force: yes
 
-- name: Purge existing node container wait flag
-  file:
-    state: absent
-    path: "{{ stn_path }}/.node_complete"
-
 - name: Start node
   docker_container:
     name: stn_node-1
@@ -50,15 +45,11 @@
     volumes:
       - "{{ stn_path }}:/django"
     working_dir: /django
-    command: /bin/ash -c "npm install && npm rebuild node-sass && gulp build:production && touch .node_complete"
     user: node
+    command: /bin/ash -c "npm install --production && gulp build:production"
+    detach: no
     state: started
     recreate: yes
-
-- name: Wait for node to finish installing deps
-  wait_for:
-    path: "{{ stn_path }}/.node_complete"
-    timeout: 600
 
 - name: Start Django server
   docker_container:
