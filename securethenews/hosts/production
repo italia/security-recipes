@@ -1,5 +1,0 @@
-[production]
-my.remote.server.address
-
-[production:vars]
-gather_facts=yes
