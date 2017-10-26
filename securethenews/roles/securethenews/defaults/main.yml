@@ -1,15 +1,15 @@
 ---
 
+stn_path: "{{ ansible_env.HOME }}/security-securethenews"
 stn_public_host: "{{ ansible_default_ipv4.address }}"
 
-stn_path: "{{ base_path }}/security-securethenews"
-stn_results_path: "{{ base_path }}/results"
+stn_postgresql_database: securethenews_db-1
+stn_postgresql_password: securethenews_password
+stn_postgresql_username: securethenews_user
 
-stn_django_secret_key:
+stn_django_secret_key: securethenews-pleasechangeme
 stn_django_allowed_hosts: "localhost {{ stn_public_host }}"
 stn_django_base_url: "{{ stn_public_host }}"
-stn_django_csrf_trusted_origins:
-# stn_django_static_root:
-# stn_django_media_root:
-stn_django_es_host:
-stn_django_es_ca_path:
+stn_django_csrf_trusted_origins: ''
+stn_django_es_host: ''
+stn_django_es_ca_path: ''

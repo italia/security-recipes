@@ -9,7 +9,10 @@
 - name: Create domain-scan docker image
   docker_image:
     name: domain_scan
+    dockerfile: "{{ role_path }}/files/Dockerfile"
     path: "{{ ds_path }}"
+    # state: present
+    # force: yes
 
 - name: Copy domains list
   copy:
@@ -31,6 +34,7 @@
     command: /bin/sh -c "/home/scanner/scan --scan=pshtt /home/scanner/cache/domains.csv ; touch /home/scanner/cache/.ds_complete"
     # command: /bin/sh -c "sudo -E -u scanner -H bash -l -s ./scan --scan=pshtt ./cache/domains.csv ; sudo -E -u scanner -H bash -l -s touch ./cache/.ds_complete"
     state: started
+    # recreate: yes
 
 - name: Wait for ds to finish scanning
   wait_for:

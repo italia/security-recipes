@@ -1,4 +1,6 @@
 ---
 
-ds_path: "{{ base_path }}/domain-scan"
-ds_results_path: "{{ base_path }}/results"
+ds_path: "{{ ansible_env.HOME }}/domain-scan"
+ds_results_path: "{{ ansible_env.HOME }}/results"
+
+ds_domains_file: "{{ role_path }}/files/domains.csv"

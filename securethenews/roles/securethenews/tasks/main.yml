@@ -17,17 +17,18 @@
 - name: Start postgresql
   docker_container:
     name: stn_postgresql-1
-    image: postgres:9.3
-    published_ports:
-      - '5432:5432'
+    image: postgres:10
+    # published_ports:
+    #   - '5432:5432'
     volumes:
       - "{{ stn_path }}:/django"
-    state: started
+    user: postgres
     env:
       POSTGRES_PASSWORD: "{{ stn_postgresql_password }}"
       POSTGRES_USER: "{{ stn_postgresql_username }}"
-      POSTGRES_DB: securethenews_db_1
-    user: postgres
+      POSTGRES_DB: "{{ stn_postgresql_database }}"
+    state: started
+    # recreate: yes
 
 - name: Build node image with python
   docker_image:
@@ -48,10 +49,10 @@
     image: stn_node
     volumes:
       - "{{ stn_path }}:/django"
-    state: started
     working_dir: /django
     command: /bin/ash -c "npm install && npm rebuild node-sass && gulp build:production && touch .node_complete"
     user: node
+    state: started
     recreate: yes
 
 - name: Wait for node to finish installing deps
@@ -65,31 +66,27 @@
     image: stn_django
     volumes:
       - "{{ stn_path }}:/var/www/django"
-    state: started
-    published_ports:
-      - "8000:8000"
+    # published_ports:
+    #   - "8000:8000"
     working_dir: /var/www/django
-    interactive: true
-    tty: true
-    # command: /bin/bash -c "sleep 30; ./manage.py makemigrations; ./manage.py migrate; ./manage.py runserver 0.0.0.0:8000"
-    # meglio questo sotto ma richiede nginx
     command: /bin/bash -c "sleep 30; ./manage.py migrate; gunicorn securethenews.wsgi:application --bind 0.0.0.0:8000"
     user: gcorn
     env:
       DJANGO_SETTINGS_MODULE: securethenews.settings.production
       DJANGO_DB_PASSWORD: "{{ stn_postgresql_password }}"
       DJANGO_DB_USER: "{{ stn_postgresql_username }}"
-      DJANGO_DB_NAME: securethenews_db_1
+      DJANGO_DB_NAME: "{{ stn_postgresql_database }}"
       DJANGO_DB_PORT: 5432
       DJANGO_DB_HOST: stn_postgresql-1
       DJANGO_SECRET_KEY: "{{ stn_django_secret_key }}"
       DJANGO_ALLOWED_HOSTS: "{{ stn_django_allowed_hosts }}"
       DJANGO_BASE_URL: "http://{{ stn_django_base_url }}"
+      DJANGO_STATIC_ROOT: '/static/'
+      DJANGO_MEDIA_ROOT: '/media/'
       DJANGO_CSRF_TRUSTED_ORIGINS: "{{ stn_django_csrf_trusted_origins }}"
-      DJANGO_STATIC_ROOT: '/static/' # "{{ stn_django_static_root }}"
-      DJANGO_MEDIA_ROOT: '/media/' # "{{ stn_django_media_root }}"
       DJANGO_ES_HOST: "{{ stn_django_es_host }}"
       DJANGO_ES_CA_PATH: "{{ stn_django_es_ca_path }}"
+    state: started
     # recreate: yes
 
 - name: Create Nginx docker image

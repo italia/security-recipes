@@ -1,6 +1,5 @@
 [production]
-devita.server.su.azure
+my.remote.server.address
 
 [production:vars]
-ansible_ssh_common_args='-o ControlMaster=auto -o ControlPersist=60s -o ControlPath=/tmp/ansible-ssh-%h-%p-%r -o ForwardAgent=yes'
-ansible_ssh_user=admin
+gather_facts=yes

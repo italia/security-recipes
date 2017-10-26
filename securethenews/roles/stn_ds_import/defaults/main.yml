@@ -1,0 +1,6 @@
+---
+
+stn_path: "{{ ansible_env.HOME }}/security-securethenews"
+ds_results_path: "{{ ansible_env.HOME }}/results"
+
+stn_ds_cron_import: false

@@ -3,39 +3,15 @@
 - hosts: all
 
   vars:
-    base_path: "{{ playbook_dir }}"
-    ds_domains_file: "{{ playbook_dir }}/files/domains.csv"
+    ds_path: "{{ playbook_dir }}/domain-scan"
+    ds_results_path: "{{ playbook_dir }}/results"
+    ds_domains_file: "{{ playbook_dir }}/domains.csv"
 
-    stn_postgresql_password: securethenewspassword
-    stn_postgresql_username: securethenews
+    stn_path: "{{ playbook_dir }}/security-securethenews"
 
-    stn_cron: false
-
-  pre_tasks:
-    - name: Create shared domain-scan and securethenews dir
-      file:
-        path: "{{ base_path }}/results"
-        state: directory
-
-    - name: Template import script
-      template:
-        src: import.py.j2
-        dest: "{{ base_path }}/results/import.py"
-        mode: 0755
+    stn_ds_cron_import: false
 
   roles:
-    # - domain-scan
-    # - securethenews
-
-  tasks:
-    - name: Update data every hour
-      cron:
-        name: "update stn data"
-        minute: "0"
-        hour: "*"
-        job: "{{ base_path }}/results/import.py"
-      when: stn_cron == true
-
-    - name: Update data now
-      shell: "python {{ base_path }}/results/import.py"
-      when: stn_cron == false
+    - domain-scan
+    - securethenews
+    - stn_ds_import
