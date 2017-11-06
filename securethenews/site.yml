@@ -1,0 +1,18 @@
+---
+
+- hosts: all
+
+  vars:
+    ds_path: "{{ playbook_dir }}/domain-scan"
+    ds_data_path: "{{ playbook_dir }}/data"
+    ds_domains_file: "{{ playbook_dir }}/sources/domains.csv"
+
+    stn_path: "{{ playbook_dir }}/security-securethenews"
+
+    stn_ds_import_cron: false
+    stn_ds_import_now: true
+
+  roles:
+    - stn_ds_import
+    - domain-scan
+    - securethenews

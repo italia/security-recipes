@@ -1,0 +1,121 @@
+---
+
+- name: Clone securethenews
+  git:
+    repo: 'https://github.com/italia/security-securethenews'
+    dest: "{{ stn_path }}"
+    depth: 1
+
+- name: Create Django docker image
+  docker_image:
+    name: stn_django
+    dockerfile: "{{ role_path }}/files/django/Dockerfile"
+    path: "{{ stn_path }}"
+    # state: present
+    # force: yes
+
+- name: Start postgresql
+  docker_container:
+    name: stn_postgresql-1
+    image: postgres:10
+    # published_ports:
+    #   - '5432:5432'
+    volumes:
+      - "{{ stn_path }}:/django"
+    user: postgres
+    env:
+      POSTGRES_PASSWORD: "{{ stn_postgresql_password }}"
+      POSTGRES_USER: "{{ stn_postgresql_username }}"
+      POSTGRES_DB: "{{ stn_postgresql_database }}"
+    state: started
+    # recreate: yes
+
+- name: Build node image with python
+  docker_image:
+    name: stn_node
+    dockerfile: "{{ role_path }}/files/node/Dockerfile"
+    path: "{{ stn_path }}"
+    # state: present
+    # force: yes
+
+- name: Start node
+  docker_container:
+    name: stn_node-1
+    image: stn_node
+    volumes:
+      - "{{ stn_path }}:/django"
+    working_dir: /django
+    user: node
+    command: /bin/ash -c "npm install --production && gulp build:production"
+    detach: no
+    state: started
+    recreate: yes
+
+- name: Start Django server
+  docker_container:
+    name: stn_django-1
+    image: stn_django
+    volumes:
+      - "{{ stn_path }}:/var/www/django"
+    # published_ports:
+    #   - "8000:8000"
+    working_dir: /var/www/django
+    command: /bin/bash -c "sleep 30; ./manage.py migrate; gunicorn securethenews.wsgi:application --bind 0.0.0.0:8000"
+    user: gcorn
+    env:
+      DJANGO_SETTINGS_MODULE: securethenews.settings.production
+      DJANGO_DB_PASSWORD: "{{ stn_postgresql_password }}"
+      DJANGO_DB_USER: "{{ stn_postgresql_username }}"
+      DJANGO_DB_NAME: "{{ stn_postgresql_database }}"
+      DJANGO_DB_PORT: 5432
+      DJANGO_DB_HOST: stn_postgresql-1
+      DJANGO_SECRET_KEY: "{{ stn_django_secret_key }}"
+      DJANGO_ALLOWED_HOSTS: "{{ stn_django_allowed_hosts }}"
+      DJANGO_BASE_URL: "http://{{ stn_django_base_url }}"
+      DJANGO_STATIC_ROOT: '/static/'
+      DJANGO_MEDIA_ROOT: '/media/'
+      DJANGO_CSRF_TRUSTED_ORIGINS: "{{ stn_django_csrf_trusted_origins }}"
+      DJANGO_ES_HOST: "{{ stn_django_es_host }}"
+      DJANGO_ES_CA_PATH: "{{ stn_django_es_ca_path }}"
+    state: started
+    # recreate: yes
+
+- name: Create Nginx docker image
+  docker_image:
+    name: stn_nginx
+    dockerfile: "{{ role_path }}/files/nginx/Dockerfile"
+    path: "{{ stn_path }}"
+    # state: present
+    # force: yes
+
+- name: Start nginx
+  docker_container:
+    name: stn_nginx-1
+    image: stn_nginx
+    published_ports:
+      - '80:80'
+    volumes:
+      - "{{ stn_path }}:/usr/share/nginx/html:ro"
+    state: started
+    # recreate: yes
+
+- name: Link containers through Docker network
+  docker_network:
+    name: stn_network
+    connected:
+      - stn_postgresql-1
+      - stn_django-1
+      - stn_node-1
+      - stn_nginx-1
+    state: present
+    force: yes
+
+- name: Wait for Django to come up
+  uri:
+    url: "http://{{ stn_public_host }}"
+    method: GET
+    status_code: 200
+  register: uri_scrape_result
+  until: uri_scrape_result.status == 200
+  retries: 20
+  delay: 5

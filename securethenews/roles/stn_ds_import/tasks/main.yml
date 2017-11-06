@@ -1,0 +1,16 @@
+---
+
+- name: Create shared domain-scan and securethenews dir
+  file:
+    path: "{{ ds_data_path }}"
+    state: directory
+  changed_when: true
+  notify:
+    - Import data cron
+    - Import data now
+
+- name: Template import script
+  template:
+    src: import.py.j2
+    dest: "{{ ds_data_path }}/import.py"
+    mode: 0755

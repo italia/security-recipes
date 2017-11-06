@@ -1,0 +1,33 @@
+---
+
+- name: Clone domain-scan
+  git:
+    repo: 'https://github.com/italia/domain-scan.git'
+    dest: "{{ ds_path }}"
+    depth: 1
+
+- name: Create domain-scan docker image
+  docker_image:
+    name: domain_scan
+    dockerfile: "{{ role_path }}/files/Dockerfile"
+    path: "{{ ds_path }}"
+    # state: present
+    # force: yes
+
+- name: Copy domains list
+  copy:
+    src: "{{ ds_domains_file }}"
+    dest: "{{ ds_data_path }}/domains.csv"
+
+- name: Start domain-scan
+  docker_container:
+    name: domain_scan-1
+    image: domain_scan
+    volumes:
+      - "{{ ds_path }}:/home/scanner:rw"
+      - "{{ ds_data_path }}:/data:rw"
+    # user: scanner
+    command: "data /data/domains.csv --scan=pshtt"
+    detach: no
+    state: started
+    recreate: yes
